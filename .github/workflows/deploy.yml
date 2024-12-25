@@ -36,7 +36,7 @@ jobs:
             cd todo-app
             
             # Copy application files
-            git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git .
+            git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
             
             # Run docker
             docker stop todo-app || true
