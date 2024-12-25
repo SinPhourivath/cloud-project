@@ -30,18 +30,23 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            # Add Docker permissions
+            sudo usermod -aG docker $USER
+            sudo systemctl restart docker
+            
             cd /home/ec2-user
-            rm -rf todo-app
-            mkdir -p todo-app
+            sudo rm -rf todo-app
+            sudo mkdir -p todo-app
+            sudo chown -R ec2-user:ec2-user todo-app
             cd todo-app
             
             # Copy application files
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
             
-            # Run docker
-            docker stop todo-app || true
-            docker rm todo-app || true
-            docker run -d \
+            # Run docker with sudo
+            sudo docker stop todo-app || true
+            sudo docker rm todo-app || true
+            sudo docker run -d \
               --name todo-app \
               -p 3000:3000 \
               -v $(pwd):/app \
