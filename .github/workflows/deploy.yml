@@ -11,39 +11,48 @@ on:
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-    # containter: 
-    #   image: node:20
-    # steps:
-    #   - uses : actions/checkout@v3
-    #     with:
-    #       node-version: 20
-    #   - run: npm ci
-    #   - run: npm run build
-    #   - run: npm
-
+    
     steps:
-    # Step 1: Check out the code
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    # Step 2: Log in to AWS CLI
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v2
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: us-east-1
-
-    # Step 3: Build Docker image
-    - name: Build Docker image
-      run: |
-        docker build -t todo-app .
-
-    # Step 4: Deploy to EC2
-    - name: Deploy Docker container
-      run: |
-        ssh -o StrictHostKeyChecking=no -i ./ec2-key.pem ec2-user@<EC2_PUBLIC_IP> << EOF
-        docker stop todo-app-container || true
-        docker rm todo-app-container || true
-        docker run -d -p 3000:3000 --env-file .env --name todo-app-container todo-app
-        EOF
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+      
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Add Docker permissions
+            sudo usermod -aG docker $USER
+            sudo systemctl restart docker
+            
+            cd /home/ec2-user
+            sudo rm -rf todo-app
+            sudo mkdir -p todo-app
+            sudo chown -R ec2-user:ec2-user todo-app
+            cd todo-app
+            
+            # Copy application files
+            git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
+            
+            # Run docker with sudo
+            sudo docker stop todo-app || true
+            sudo docker rm todo-app || true
+            sudo docker run -d \
+              --name todo-app \
+              -p 3000:3000 \
+              -v $(pwd):/app \
+              -e MYSQL_HOST=${{ secrets.MYSQL_HOST }} \
+              -e MYSQL_USER=${{ secrets.MYSQL_USER }} \
+              -e MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }} \
+              -e MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }} \
+              node:18-alpine \
+              sh -c "cd /app && yarn install && yarn run dev"
