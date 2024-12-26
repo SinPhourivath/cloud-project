@@ -1,12 +1,17 @@
 services:
   app:
     image: node:18-alpine
-    command: sh -c "cd /app && yarn install && yarn run dev"
+    command: sh -c "yarn install && yarn run dev"
     ports:
       - 3000:3000
     working_dir: /app
     volumes:
       - ./:/app
-      - /app/node_modules
-    env_file:
+      - /app/node_modules  # Add this to preserve node_modules
+    env_file:  # Add this section
       - .env
+    environment:  # This remains as fallback/override
+      MYSQL_HOST: ${MYSQL_HOST}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DB: ${MYSQL_DATABASE}
