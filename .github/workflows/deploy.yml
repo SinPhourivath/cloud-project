@@ -21,7 +21,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-1  # Changed to your RDS region
+          aws-region: ap-southeast-1
         
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
@@ -36,10 +36,6 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
           script: |
-            # Add Docker permissions
-            sudo usermod -aG docker $USER
-            sudo systemctl restart docker
-            
             # Setup application directory
             cd /home/ec2-user
             sudo rm -rf todo-app
@@ -50,7 +46,7 @@ jobs:
             # Clone repository
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
             
-            # Create .env file with the correct values
+            # Create .env file
             cat > .env << EOF
             MYSQL_HOST=${MYSQL_HOST}
             MYSQL_USER=${MYSQL_USER}
@@ -58,30 +54,55 @@ jobs:
             MYSQL_DATABASE=${MYSQL_DATABASE}
             EOF
             
-            # Verify .env file was created
-            ls -la .env
+            # Remove any existing containers
+            sudo docker stop todo-app || true
+            sudo docker rm todo-app || true
             
-            # Stop and remove existing containers
-            sudo docker compose down || true
-            sudo docker rm -f todo-app || true
+            # Remove old node_modules and package-lock.json
+            rm -rf node_modules package-lock.json
             
-            # Build and start with docker
+            # Build and start application
             sudo docker run -d \
               --name todo-app \
               -p 3000:3000 \
               -v $(pwd):/app \
-              -v /app/node_modules \
+              -v todo-app-node-modules:/app/node_modules \
               --env-file .env \
               node:18-alpine \
               sh -c "cd /app && yarn install && yarn run dev"
             
             # Wait for application to start
-            sleep 10
+            echo "Waiting for application to start..."
+            sleep 20
             
-            # Debug commands
-            echo "Checking container status..."
-            sudo docker ps
-            echo "Checking container logs..."
+            # Check logs
+            echo "Container logs:"
             sudo docker logs todo-app
-            echo "Checking if application is responding..."
-            curl -v localhost:3000
+            
+            # Check if container is running
+            if ! sudo docker ps | grep todo-app; then
+              echo "Container failed to start"
+              exit 1
+            fi
+            
+            # Test database connection
+            echo "Testing database connection..."
+            sudo docker exec todo-app node -e "
+              const mysql = require('mysql2/promise');
+              async function testConnection() {
+                try {
+                  const conn = await mysql.createConnection({
+                    host: process.env.MYSQL_HOST,
+                    user: process.env.MYSQL_USER,
+                    password: process.env.MYSQL_PASSWORD,
+                    database: process.env.MYSQL_DATABASE
+                  });
+                  console.log('Database connection successful');
+                  await conn.end();
+                } catch (err) {
+                  console.error('Database connection failed:', err);
+                  process.exit(1);
+                }
+              }
+              testConnection();
+            "
