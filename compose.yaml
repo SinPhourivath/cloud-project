@@ -7,7 +7,10 @@ services:
     working_dir: /app
     volumes:
       - ./:/app
-    environment:
+      - /app/node_modules  # Add this to preserve node_modules
+    env_file:  # Add this section
+      - .env
+    environment:  # This remains as fallback/override
       MYSQL_HOST: ${MYSQL_HOST}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
