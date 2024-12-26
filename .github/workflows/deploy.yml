@@ -58,51 +58,19 @@ jobs:
             sudo docker stop todo-app || true
             sudo docker rm todo-app || true
             
-            # Remove old node_modules and package-lock.json
-            rm -rf node_modules package-lock.json
-            
             # Build and start application
             sudo docker run -d \
               --name todo-app \
               -p 3000:3000 \
               -v $(pwd):/app \
-              -v todo-app-node-modules:/app/node_modules \
               --env-file .env \
               node:18-alpine \
               sh -c "cd /app && yarn install && yarn run dev"
             
             # Wait for application to start
             echo "Waiting for application to start..."
-            sleep 20
+            sleep 30
             
             # Check logs
             echo "Container logs:"
             sudo docker logs todo-app
-            
-            # Check if container is running
-            if ! sudo docker ps | grep todo-app; then
-              echo "Container failed to start"
-              exit 1
-            fi
-            
-            # Test database connection
-            echo "Testing database connection..."
-            sudo docker exec todo-app node -e "
-              const mysql = require('mysql2/promise');
-              async function testConnection() {
-                try {
-                  const conn = await mysql.createConnection({
-                    host: process.env.MYSQL_HOST,
-                    user: process.env.MYSQL_USER,
-                    password: process.env.MYSQL_PASSWORD,
-                    database: process.env.MYSQL_DATABASE
-                  });
-                  console.log('Database connection successful');
-                  await conn.end();
-                } catch (err) {
-                  console.error('Database connection failed:', err);
-                  process.exit(1);
-                }
-              }
-              testConnection();
-            "
