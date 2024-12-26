@@ -21,14 +21,20 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ap-southeast-1  # Changed to your RDS region
         
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
+        env:
+          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
+          MYSQL_USER: ${{ secrets.MYSQL_USER }}
+          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
+          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
           script: |
             # Add Docker permissions
             sudo usermod -aG docker $USER
@@ -44,14 +50,33 @@ jobs:
             # Clone repository
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
             
-            # Copy the .env file (make sure it exists in the EC2 instance)
-            cp /home/ec2-user/.env .
+            # Create .env file with the correct values
+            cat > .env << EOF
+            MYSQL_HOST=${MYSQL_HOST}
+            MYSQL_USER=${MYSQL_USER}
+            MYSQL_PASSWORD=${MYSQL_PASSWORD}
+            MYSQL_DATABASE=${MYSQL_DATABASE}
+            EOF
+            
+            # Verify .env file was created
+            ls -la .env
             
             # Stop and remove existing containers
-            sudo docker-compose down || true
+            sudo docker compose down || true
+            sudo docker rm -f todo-app || true
             
-            # Build and start with docker-compose
-            sudo docker-compose up -d --build
+            # Build and start with docker
+            sudo docker run -d \
+              --name todo-app \
+              -p 3000:3000 \
+              -v $(pwd):/app \
+              -v /app/node_modules \
+              --env-file .env \
+              node:18-alpine \
+              sh -c "cd /app && yarn install && yarn run dev"
+            
+            # Wait for application to start
+            sleep 10
             
             # Debug commands
             echo "Checking container status..."
