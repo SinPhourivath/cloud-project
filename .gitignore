@@ -10,7 +10,7 @@ terraform.tfstate.backup
 
 *.pem
 *.key
-*./node_modules
+node_modules/
 *.env
 
 crash.log

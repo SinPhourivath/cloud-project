@@ -4,73 +4,19 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
 
 jobs:
-  build-deploy:
+  build:
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-        
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-1
-        
+        uses: actions/checkout@v2
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+      - name: Build and push Docker image
+        run: |
+          docker build -t app .
+          docker push app
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@master
-        env:
-          MYSQL_HOST: ${{ secrets.MYSQL_HOST }}
-          MYSQL_USER: ${{ secrets.MYSQL_USER }}
-          MYSQL_PASSWORD: ${{ secrets.MYSQL_PASSWORD }}
-          MYSQL_DATABASE: ${{ secrets.MYSQL_DATABASE }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
-          script: |
-            # Setup application directory
-            cd /home/ec2-user
-            sudo rm -rf todo-app
-            sudo mkdir -p todo-app
-            sudo chown -R ec2-user:ec2-user todo-app
-            cd todo-app
-            
-            # Clone repository
-            git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
-            
-            # Create .env file
-            cat > .env << EOF
-            MYSQL_HOST=${MYSQL_HOST}
-            MYSQL_USER=${MYSQL_USER}
-            MYSQL_PASSWORD=${MYSQL_PASSWORD}
-            MYSQL_DATABASE=${MYSQL_DATABASE}
-            EOF
-            
-            # Remove any existing containers
-            sudo docker stop todo-app || true
-            sudo docker rm todo-app || true
-            
-            # Build and start application
-            sudo docker run -d \
-              --name todo-app \
-              -p 3000:3000 \
-              -v $(pwd):/app \
-              --env-file .env \
-              node:18-alpine \
-              sh -c "cd /app && yarn install && yarn run dev"
-            
-            # Wait for application to start
-            echo "Waiting for application to start..."
-            sleep 30
-            
-            # Check logs
-            echo "Container logs:"
-            sudo docker logs todo-app
+        run: |
+          ssh -i "cloud_project.pem" ec2-user@${{secrets.EC2_HOST}} "docker pull app && docker run -d app"
