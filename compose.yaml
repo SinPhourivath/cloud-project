@@ -3,15 +3,15 @@ services:
     image: node:18-alpine
     command: sh -c "yarn install && yarn run dev"
     ports:
-      - 3000:3000
+      - 127.0.0.1:3000:3000
     working_dir: /app
     volumes:
       - ./:/app
     environment:
-      MYSQL_HOST: terraform-20241225044214108500000001.cpqie04uw3za.ap-southeast-1.rds.amazonaws.com
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: Admin#123
-      MYSQL_DB: todo_app_db
+      MYSQL_HOST: mysql
+      MYSQL_USER: root
+      MYSQL_PASSWORD: secret
+      MYSQL_DB: todos
 
   mysql:
     image: mysql:8.0
@@ -19,11 +19,7 @@ services:
       - todo-mysql-data:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: secret
-      MYSQL_DATABASE: todo_app_db
+      MYSQL_DATABASE: todos
 
 volumes:
   todo-mysql-data:
-      MYSQL_HOST: ${MYSQL_HOST}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_DB: ${MYSQL_DATABASE}
