@@ -19,4 +19,8 @@ jobs:
           docker push app
       - name: Deploy to EC2
         run: |
+<<<<<<< HEAD
           ssh -i "cloud_project.pem" ec2-user@54.251.165.204"docker pull app && docker run -d app"
+=======
+          ssh -i "cloud_project.pem" ec2-user@54.251.165.204"docker pull app && docker run -d app"
+>>>>>>> 66947a0e53787ae9bd21e8e6060823656a654a5c
