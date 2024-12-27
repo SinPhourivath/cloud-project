@@ -22,8 +22,5 @@ services:
       MYSQL_DATABASE: todos
 
 volumes:
-<<<<<<< HEAD
+
   todo-mysql-data:
-=======
-  todo-mysql-data:
->>>>>>> 66947a0e53787ae9bd21e8e6060823656a654a5c
