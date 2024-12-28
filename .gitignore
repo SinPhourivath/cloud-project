@@ -2,13 +2,18 @@
 .terraform.lock.hcl
 terraform.tfstate
 terraform.tfstate.backup
+db-creds.yml
 
 *.tfplan
 
 *.tfvars
 *.tfvars.json
+package-lock.json
 
 *.pem
 *.key
+node_modules/
+*.env
+
 
 crash.log
