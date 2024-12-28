@@ -1,2 +1,3 @@
-if (process.env.MYSQL_HOST) module.exports = require('./mysql');
-else module.exports = require('./sqlite');
+require('env').config();
+
+if (process.env.DB_HOST) module.exports = require('./mysql');
