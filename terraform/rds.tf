@@ -22,6 +22,6 @@ resource "aws_db_instance" "mysql_db" {
   skip_final_snapshot  = true
 
   tags = {
-    Name = "TodoAppDatabase"
+    Name = "TodoAppDB"
   }
 }
