@@ -1,21 +1,29 @@
-require('env').config();
+require('dotenv').config();
 const waitPort = require('wait-port');
 const fs = require('fs');
 const mysql = require('mysql2');
 
 const {
-    MYSQL_HOST: DB_HOST,
-    MYSQL_USER: DB_USER,
-    MYSQL_PASSWORD: DB_PASSWORD,
-    MYSQL_DB: DB_NAME,
+    DB_HOST,
+    DB_USER,
+    DB_PASSWORD,
+    DB_NAME,
+    DB_PORT
 } = process.env;
+
+if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
+    console.error('Missing required database environment variables');
+    process.exit(1);
+}
 
 let pool;
 
 async function init() {
+
+    console.log(`Attempting to connect to MySQL at host: ${DB_HOST}`);
     await waitPort({ 
         host: DB_HOST, 
-        port: 3306,
+        port: DB_PORT,
         timeout: 10000,
         waitForDns: true,
     });

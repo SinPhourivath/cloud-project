@@ -24,4 +24,5 @@ resource "aws_db_instance" "mysql_db" {
   tags = {
     Name = "TodoAppDB"
   }
+  
 }
