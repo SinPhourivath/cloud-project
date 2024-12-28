@@ -8,7 +8,6 @@ const {
     DB_USER,
     DB_PASSWORD,
     DB_NAME,
-    DB_PORT
 } = process.env;
 
 if (!DB_HOST || !DB_USER || !DB_PASSWORD || !DB_NAME) {
@@ -23,7 +22,7 @@ async function init() {
     console.log(`Attempting to connect to MySQL at host: ${DB_HOST}`);
     await waitPort({ 
         host: DB_HOST, 
-        port: DB_PORT,
+        port: 3306,
         timeout: 10000,
         waitForDns: true,
     });
