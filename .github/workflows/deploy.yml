@@ -33,48 +33,48 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
           script: |
+            # Navigate to home directory
+            cd /home/ec2-user
+            
             # Stop and remove existing container
             sudo docker stop brave_lumiere || true
             sudo docker rm brave_lumiere || true
             
-            # Remove old image with force
-            sudo docker rmi -f cloud-computing-project:latest || true
+            # Remove old project directory completely
+            sudo rm -rf cloud-computing-project
             
-            # Clean up any old code
-            cd /home/ec2-user
-            rm -rf cloud-computing-project
-            
-            # Clone latest code
+            # Clone the latest code
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Print the content of index.html to verify we have the latest version
-            echo "Checking index.html content:"
-            cat index.html
+            # Create .env file
+            cat > .env << EOF
+            DB_HOST=${MYSQL_HOST}
+            DB_USER=${MYSQL_USER}
+            DB_PASSWORD=${MYSQL_PASSWORD}
+            DB_NAME=${MYSQL_DATABASE}
+            EOF
             
-            # Build new image with no cache
-            sudo docker build --no-cache -t cloud-computing-project:latest .
+            # Remove old image
+            sudo docker rmi cloud-computing-project:latest || true
             
-            # Run new container with no cache volumes
+            # Build new image
+            sudo docker build -t cloud-computing-project:latest .
+            
+            # Run new container
             sudo docker run -d \
               --name brave_lumiere \
-              --no-cache \
               -p 80:3000 \
               -e MYSQL_HOST="${MYSQL_HOST}" \
               -e MYSQL_USER="${MYSQL_USER}" \
               -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
-              -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
+              -e MYSQL_DB="${MYSQL_DATABASE}" \
               cloud-computing-project:latest
-
-            # Verify deployment
-            echo "Container is running with ID:"
-            sudo docker ps -q --filter name=brave_lumiere
             
-            # Print container logs
-            echo "Container logs:"
-            sleep 5
-            sudo docker logs brave_lumiere
+            # Verify new container
+            echo "New container details:"
+            sudo docker ps | grep brave_lumiere
             
-            # Check files in container
-            echo "Files in container:"
-            sudo docker exec brave_lumiere ls -la /app
+            # Show the version of index.html in container
+            echo "Content of index.html in container:"
+            sudo docker exec brave_lumiere cat /app/src/static/index.html

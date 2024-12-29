@@ -5,6 +5,13 @@ services:
     ports:
       - 3000:3000
     working_dir: /app
+    COPY package.json yarn.lock ./
+
+    # Install dependencies
+    RUN yarn install
+
+    # Copy the rest of the application
+    COPY . .
     volumes:
       - ./:/app
     environment:
