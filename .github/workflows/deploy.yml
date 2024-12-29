@@ -36,62 +36,49 @@ jobs:
             # Navigate to home directory
             cd /home/ec2-user
             
-            # Stop and remove existing container
-            sudo docker stop brave_lumiere || true
-            sudo docker rm brave_lumiere || true
+            # Stop and remove existing containers
+            sudo docker stop $(sudo docker ps -a -q) || true
+            sudo docker rm $(sudo docker ps -a -q) || true
             
-            # Remove old project directory completely
+            # Remove old project directory
             sudo rm -rf cloud-computing-project
             
             # Clone the latest code
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Create .env file with proper line endings
+            # Create .env file
             cat > .env << 'EOF'
             DB_HOST=${MYSQL_HOST}
             DB_USER=${MYSQL_USER}
             DB_PASSWORD=${MYSQL_PASSWORD}
             DB_NAME=${MYSQL_DATABASE}
             PORT=3000
-            NODE_ENV=production
             EOF
             
-            # Remove old image
-            sudo docker rmi cloud-computing-project:latest || true
+            # Remove old images
+            sudo docker system prune -af
             
-            # Build new image with build arguments
-            sudo docker build \
-              --build-arg NODE_ENV=production \
-              --build-arg PORT=3000 \
-              -t cloud-computing-project:latest .
+            # Build new image
+            sudo docker build -t cloud-computing-project:latest .
             
-            # Run new container with proper environment and restart policy
+            # Run new container with proper network configuration
             sudo docker run -d \
               --name brave_lumiere \
               --restart unless-stopped \
               -p 80:3000 \
-              -e NODE_ENV=production \
+              -p 3000:3000 \
+              -e DB_HOST="${MYSQL_HOST}" \
+              -e DB_USER="${MYSQL_USER}" \
+              -e DB_PASSWORD="${MYSQL_PASSWORD}" \
+              -e DB_NAME="${MYSQL_DATABASE}" \
               -e PORT=3000 \
-              -e MYSQL_HOST="${MYSQL_HOST}" \
-              -e MYSQL_USER="${MYSQL_USER}" \
-              -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
-              -e MYSQL_DB="${MYSQL_DATABASE}" \
               cloud-computing-project:latest
             
-            # Wait for container to start
-            sleep 10
-            
-            # Check container status and logs
-            echo "Container Status:"
-            sudo docker ps -a | grep brave_lumiere
-            
-            echo "Container Logs:"
+            # Display container logs
+            echo "Container logs:"
             sudo docker logs brave_lumiere
             
-            # Check if container is running
-            if ! sudo docker ps | grep -q brave_lumiere; then
-              echo "Container failed to start. Checking logs..."
-              sudo docker logs brave_lumiere
-              exit 1
-            fi
+            # Check if MySQL is accessible
+            echo "Testing MySQL connection:"
+            sudo docker exec brave_lumiere ping -c 1 ${MYSQL_HOST} || echo "MySQL host unreachable"
