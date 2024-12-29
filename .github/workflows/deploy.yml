@@ -37,19 +37,25 @@ jobs:
             sudo docker stop brave_lumiere || true
             sudo docker rm brave_lumiere || true
             
-            # Remove old image
-            sudo docker rmi cloud-computing-project:latest || true
+            # Remove old image with force
+            sudo docker rmi -f cloud-computing-project:latest || true
             
-            # Clone latest code
+            # Clean up any old code
             cd /home/ec2-user
             rm -rf cloud-computing-project
-            git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
+            
+            # Clone latest code with forced update
+            git clone --no-cache https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Build new image with same name as existing
-            sudo docker build -t cloud-computing-project:latest .
+            # Verify we have the latest code
+            echo "Current commit:"
+            git log -1 --oneline
             
-            # Run new container with same port mappings
+            # Build new image with no cache
+            sudo docker build --no-cache -t cloud-computing-project:latest .
+            
+            # Run new container
             sudo docker run -d \
               --name brave_lumiere \
               -p 80:3000 \
@@ -59,5 +65,11 @@ jobs:
               -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
               cloud-computing-project:latest
 
-            # Verify deployment
-            sudo docker ps
+            # Verify the new container is running with the correct image
+            echo "New container status:"
+            sudo docker ps | grep brave_lumiere
+            
+            # Show container logs to verify startup
+            echo "Container logs:"
+            sleep 5
+            sudo docker logs brave_lumiere
