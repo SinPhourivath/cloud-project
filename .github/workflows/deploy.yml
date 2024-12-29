@@ -19,7 +19,7 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ap-southeast-1
-        
+      
       - name: Deploy to EC2
         uses: appleboy/ssh-action@master
         env:
@@ -47,34 +47,51 @@ jobs:
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Create .env file
-            cat > .env << EOF
+            # Create .env file with proper line endings
+            cat > .env << 'EOF'
             DB_HOST=${MYSQL_HOST}
             DB_USER=${MYSQL_USER}
             DB_PASSWORD=${MYSQL_PASSWORD}
             DB_NAME=${MYSQL_DATABASE}
+            PORT=3000
+            NODE_ENV=production
             EOF
             
             # Remove old image
             sudo docker rmi cloud-computing-project:latest || true
             
-            # Build new image
-            sudo docker build -t cloud-computing-project:latest .
+            # Build new image with build arguments
+            sudo docker build \
+              --build-arg NODE_ENV=production \
+              --build-arg PORT=3000 \
+              -t cloud-computing-project:latest .
             
-            # Run new container
+            # Run new container with proper environment and restart policy
             sudo docker run -d \
               --name brave_lumiere \
+              --restart unless-stopped \
               -p 80:3000 \
+              -e NODE_ENV=production \
+              -e PORT=3000 \
               -e MYSQL_HOST="${MYSQL_HOST}" \
               -e MYSQL_USER="${MYSQL_USER}" \
               -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
               -e MYSQL_DB="${MYSQL_DATABASE}" \
               cloud-computing-project:latest
             
-            # Verify new container
-            echo "New container details:"
-            sudo docker ps | grep brave_lumiere
+            # Wait for container to start
+            sleep 10
             
-            # Show the version of index.html in container
-            echo "Content of index.html in container:"
-            sudo docker exec brave_lumiere cat /app/src/static/index.html
+            # Check container status and logs
+            echo "Container Status:"
+            sudo docker ps -a | grep brave_lumiere
+            
+            echo "Container Logs:"
+            sudo docker logs brave_lumiere
+            
+            # Check if container is running
+            if ! sudo docker ps | grep -q brave_lumiere; then
+              echo "Container failed to start. Checking logs..."
+              sudo docker logs brave_lumiere
+              exit 1
+            fi
