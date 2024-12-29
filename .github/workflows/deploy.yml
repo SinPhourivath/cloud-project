@@ -44,20 +44,21 @@ jobs:
             cd /home/ec2-user
             rm -rf cloud-computing-project
             
-            # Clone latest code with forced update
-            git clone --no-cache https://github.com/g3-cloud-computing-project/cloud-computing-project.git
+            # Clone latest code
+            git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Verify we have the latest code
-            echo "Current commit:"
-            git log -1 --oneline
+            # Print the content of index.html to verify we have the latest version
+            echo "Checking index.html content:"
+            cat index.html
             
             # Build new image with no cache
             sudo docker build --no-cache -t cloud-computing-project:latest .
             
-            # Run new container
+            # Run new container with no cache volumes
             sudo docker run -d \
               --name brave_lumiere \
+              --no-cache \
               -p 80:3000 \
               -e MYSQL_HOST="${MYSQL_HOST}" \
               -e MYSQL_USER="${MYSQL_USER}" \
@@ -65,11 +66,15 @@ jobs:
               -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
               cloud-computing-project:latest
 
-            # Verify the new container is running with the correct image
-            echo "New container status:"
-            sudo docker ps | grep brave_lumiere
+            # Verify deployment
+            echo "Container is running with ID:"
+            sudo docker ps -q --filter name=brave_lumiere
             
-            # Show container logs to verify startup
+            # Print container logs
             echo "Container logs:"
             sleep 5
             sudo docker logs brave_lumiere
+            
+            # Check files in container
+            echo "Files in container:"
+            sudo docker exec brave_lumiere ls -la /app
