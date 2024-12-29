@@ -98,9 +98,9 @@ jobs:
               exit 1
             fi
 
-            # Test MySQL connection
+            # Test MySQL connection using node
             echo "Testing MySQL connection..."
-            sudo docker exec brave_lumiere bash -c 'nc -zv $DB_HOST 3306' || {
+            sudo docker exec brave_lumiere sh -c 'node -e "const mysql=require('\''mysql2'\'');const conn=mysql.createConnection({host:process.env.DB_HOST,user:process.env.DB_USER,password:process.env.DB_PASSWORD,database:process.env.DB_NAME});conn.connect((err)=>{if(err){console.error(err);process.exit(1)}else{console.log('\''MySQL connection successful'\'');process.exit(0)}})"' || {
               echo "MySQL connection failed!"
               exit 1
             }
