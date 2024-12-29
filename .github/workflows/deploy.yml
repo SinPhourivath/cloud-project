@@ -36,6 +36,11 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
           script: |
+            # Stop and remove existing container
+            sudo docker stop todo-app || true
+            sudo docker rm todo-app || true
+            sudo docker rmi todo-app-image || true
+            
             # Setup application directory
             cd /home/ec2-user
             sudo rm -rf todo-app
@@ -43,7 +48,7 @@ jobs:
             sudo chown -R ec2-user:ec2-user todo-app
             cd todo-app
             
-            # Clone repository
+            # Clone repository (fresh copy)
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git .
             
             # Create .env file
@@ -54,22 +59,29 @@ jobs:
             MYSQL_DATABASE=${MYSQL_DATABASE}
             EOF
             
-            # Remove any existing containers
-            sudo docker stop todo-app || true
-            sudo docker rm todo-app || true
+            # Create Dockerfile for the application
+            cat > Dockerfile << EOF
+            FROM node:18-alpine
+            WORKDIR /app
+            COPY . .
+            RUN yarn install
+            EXPOSE 3000
+            CMD ["yarn", "run", "dev"]
+            EOF
             
-            # Build and start application
+            # Build new image
+            sudo docker build -t todo-app-image .
+            
+            # Run new container
             sudo docker run -d \
               --name todo-app \
               -p 3000:3000 \
-              -v $(pwd):/app \
               --env-file .env \
-              node:18-alpine \
-              sh -c "cd /app && yarn install && yarn run dev"
+              todo-app-image
             
             # Wait for application to start
             echo "Waiting for application to start..."
-            sleep 30
+            sleep 10
             
             # Check logs
             echo "Container logs:"
