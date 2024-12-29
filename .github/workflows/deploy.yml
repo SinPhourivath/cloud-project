@@ -33,10 +33,12 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           envs: MYSQL_HOST,MYSQL_USER,MYSQL_PASSWORD,MYSQL_DATABASE
           script: |
-            # Clean up existing container and image
-            sudo docker stop todo-app || true
-            sudo docker rm todo-app || true
-            sudo docker rmi todo-app-image || true
+            # Stop and remove existing container
+            sudo docker stop brave_lumiere || true
+            sudo docker rm brave_lumiere || true
+            
+            # Remove old image
+            sudo docker rmi cloud-computing-project:latest || true
             
             # Clone latest code
             cd /home/ec2-user
@@ -44,16 +46,18 @@ jobs:
             git clone https://github.com/g3-cloud-computing-project/cloud-computing-project.git
             cd cloud-computing-project
             
-            # Build and run new container
-            sudo docker build -t todo-app-image .
+            # Build new image with same name as existing
+            sudo docker build -t cloud-computing-project:latest .
+            
+            # Run new container with same port mappings
             sudo docker run -d \
-              --name todo-app \
+              --name brave_lumiere \
               -p 80:3000 \
               -e MYSQL_HOST="${MYSQL_HOST}" \
               -e MYSQL_USER="${MYSQL_USER}" \
               -e MYSQL_PASSWORD="${MYSQL_PASSWORD}" \
               -e MYSQL_DATABASE="${MYSQL_DATABASE}" \
-              todo-app-image
+              cloud-computing-project:latest
 
-            # Show container status
-            sudo docker ps | grep todo-app
+            # Verify deployment
+            sudo docker ps
