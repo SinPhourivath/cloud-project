@@ -14,5 +14,6 @@ package-lock.json
 *.key
 node_modules/
 *.env
+.env
 
 crash.log
